@@ -113,4 +113,12 @@ var _ = Describe("Supply", func() {
 			Expect(supplier.InstallPip()).To(Succeed())
 		})
 	})
+
+	Describe("RunPip", func() {
+		It("Runs and outputs pip", func() {
+			// FIXME test indent (and cleanup?)
+			mockCommand.EXPECT().Execute(buildDir, gomock.Any(), gomock.Any(), "pip", "install", "-r", "requirements.txt", "--exists-action=w", fmt.Sprintf("--src=%s/src", depDir))
+			Expect(supplier.RunPip()).To(Succeed())
+		})
+	})
 })

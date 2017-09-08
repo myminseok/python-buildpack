@@ -2,6 +2,7 @@ package supply
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -28,7 +29,7 @@ type Manifest interface {
 }
 
 type Command interface {
-	// Execute(string, io.Writer, io.Writer, string, ...string) error
+	Execute(string, io.Writer, io.Writer, string, ...string) error
 	Output(dir string, program string, args ...string) (string, error)
 	// Run(cmd *exec.Cmd) error
 }
@@ -114,5 +115,13 @@ func (s *Supplier) InstallPip() error {
 		s.Stager.LinkDirectoryInDepDir(filepath.Join(s.Stager.DepDir(), "python", dir), dir)
 	}
 
+	return nil
+}
+
+func (s *Supplier) RunPip() error {
+
+	if err := s.Command.Execute(s.Stager.BuildDir(), os.Stdout, os.Stderr, "pip", "install", "-r", "requirements.txt", "--exists-action=w", fmt.Sprintf("--src=%s/src", s.Stager.DepDir())); err != nil {
+		return err
+	}
 	return nil
 }
