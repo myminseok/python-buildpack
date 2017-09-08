@@ -13,7 +13,7 @@ type Stager interface {
 	BuildDir() string
 	DepDir() string
 	DepsIdx() string
-	// LinkDirectoryInDepDir(string, string) error
+	LinkDirectoryInDepDir(string, string) error
 	// WriteEnvFile(string, string) error
 	// WriteProfileD(string, string) error
 	// SetStagingEnvironment() error
@@ -79,8 +79,8 @@ func (s *Supplier) InstallPython() error {
 		return err
 	}
 
-	// s.Stager.LinkDirectoryInDepDir(filepath.Join(s.Stager.DepDir(), "python", "bin"), "bin")
-	// s.Stager.LinkDirectoryInDepDir(filepath.Join(s.Stager.DepDir(), "python", "lib"), "lib")
+	s.Stager.LinkDirectoryInDepDir(filepath.Join(pythonInstallDir, "bin"), "bin")
+	s.Stager.LinkDirectoryInDepDir(filepath.Join(pythonInstallDir, "lib"), "lib")
 
 	return nil
 }

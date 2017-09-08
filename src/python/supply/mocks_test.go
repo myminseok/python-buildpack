@@ -56,6 +56,30 @@ func (_mr *MockStagerMockRecorder) DepDir() *gomock.Call {
 	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "DepDir", reflect.TypeOf((*MockStager)(nil).DepDir))
 }
 
+// DepsIdx mocks base method
+func (_m *MockStager) DepsIdx() string {
+	ret := _m.ctrl.Call(_m, "DepsIdx")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// DepsIdx indicates an expected call of DepsIdx
+func (_mr *MockStagerMockRecorder) DepsIdx() *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "DepsIdx", reflect.TypeOf((*MockStager)(nil).DepsIdx))
+}
+
+// LinkDirectoryInDepDir mocks base method
+func (_m *MockStager) LinkDirectoryInDepDir(_param0 string, _param1 string) error {
+	ret := _m.ctrl.Call(_m, "LinkDirectoryInDepDir", _param0, _param1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// LinkDirectoryInDepDir indicates an expected call of LinkDirectoryInDepDir
+func (_mr *MockStagerMockRecorder) LinkDirectoryInDepDir(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "LinkDirectoryInDepDir", reflect.TypeOf((*MockStager)(nil).LinkDirectoryInDepDir), arg0, arg1)
+}
+
 // MockManifest is a mock of Manifest interface
 type MockManifest struct {
 	ctrl     *gomock.Controller

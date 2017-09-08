@@ -18,38 +18,41 @@ import (
 
 var _ = Describe("Supply", func() {
 	var (
-		err      error
-		buildDir string
-		depsDir  string
-		depsIdx  string
-		// depDir   string
+		err          error
+		buildDir     string
+		depsIdx      string
+		depDir       string
 		supplier     *supply.Supplier
 		logger       *libbuildpack.Logger
 		buffer       *bytes.Buffer
 		mockCtrl     *gomock.Controller
 		mockManifest *MockManifest
+		mockStager   *MockStager
 	)
 
 	BeforeEach(func() {
 		buildDir, err = ioutil.TempDir("", "python-buildpack.build.")
 		Expect(err).To(BeNil())
 
-		depsDir, err = ioutil.TempDir("", "python-buildpack.deps.")
+		depsDir, err := ioutil.TempDir("", "python-buildpack.deps.")
 		Expect(err).To(BeNil())
 
 		depsIdx = "13"
+		depDir = filepath.Join(depsDir, depsIdx)
 
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockManifest = NewMockManifest(mockCtrl)
+		mockStager = NewMockStager(mockCtrl)
+		mockStager.EXPECT().BuildDir().AnyTimes().Return(buildDir)
+		mockStager.EXPECT().DepDir().AnyTimes().Return(depDir)
 
-		args := []string{buildDir, "", depsDir, depsIdx}
+		// args := []string{buildDir, "", depsDir, depsIdx}
 		buffer = new(bytes.Buffer)
 		logger = libbuildpack.NewLogger(ansicleaner.New(buffer))
-		stager := libbuildpack.NewStager(args, logger, &libbuildpack.Manifest{})
 
 		supplier = &supply.Supplier{
-			Stager:   stager,
 			Manifest: mockManifest,
+			Stager:   mockStager,
 			Log:      logger,
 		}
 	})
@@ -59,7 +62,7 @@ var _ = Describe("Supply", func() {
 		var versions []string
 
 		BeforeEach(func() {
-			pythonInstallDir = filepath.Join(depsDir, depsIdx, "python")
+			pythonInstallDir = filepath.Join(depDir, "python")
 			ioutil.WriteFile(filepath.Join(buildDir, "runtime.txt"), []byte("python-3.4.2"), 0644)
 
 			versions = []string{"3.4.2"}
@@ -68,7 +71,9 @@ var _ = Describe("Supply", func() {
 		Context("runtime.txt sets Python version 3", func() {
 			It("installs Python version 3", func() {
 				mockManifest.EXPECT().AllDependencyVersions("python").Return(versions)
-				mockManifest.EXPECT().InstallDependency(libbuildpack.Dependency{Name: "python", Version: "3.4.2"}, pythonInstallDir).Return(nil)
+				mockManifest.EXPECT().InstallDependency(libbuildpack.Dependency{Name: "python", Version: "3.4.2"}, pythonInstallDir)
+				mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(pythonInstallDir, "bin"), "bin")
+				mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(pythonInstallDir, "lib"), "lib")
 				Expect(supplier.InstallPython()).To(Succeed())
 
 				// Expect(buffer.String()).To(ContainSubstring("asdfg"))
