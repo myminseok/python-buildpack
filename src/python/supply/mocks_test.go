@@ -139,3 +139,56 @@ func (_m *MockManifest) InstallDependency(_param0 libbuildpack.Dependency, _para
 func (_mr *MockManifestMockRecorder) InstallDependency(arg0, arg1 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "InstallDependency", reflect.TypeOf((*MockManifest)(nil).InstallDependency), arg0, arg1)
 }
+
+// InstallOnlyVersion mocks base method
+func (_m *MockManifest) InstallOnlyVersion(_param0 string, _param1 string) error {
+	ret := _m.ctrl.Call(_m, "InstallOnlyVersion", _param0, _param1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InstallOnlyVersion indicates an expected call of InstallOnlyVersion
+func (_mr *MockManifestMockRecorder) InstallOnlyVersion(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "InstallOnlyVersion", reflect.TypeOf((*MockManifest)(nil).InstallOnlyVersion), arg0, arg1)
+}
+
+// MockCommand is a mock of Command interface
+type MockCommand struct {
+	ctrl     *gomock.Controller
+	recorder *MockCommandMockRecorder
+}
+
+// MockCommandMockRecorder is the mock recorder for MockCommand
+type MockCommandMockRecorder struct {
+	mock *MockCommand
+}
+
+// NewMockCommand creates a new mock instance
+func NewMockCommand(ctrl *gomock.Controller) *MockCommand {
+	mock := &MockCommand{ctrl: ctrl}
+	mock.recorder = &MockCommandMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (_m *MockCommand) EXPECT() *MockCommandMockRecorder {
+	return _m.recorder
+}
+
+// Output mocks base method
+func (_m *MockCommand) Output(dir string, program string, args ...string) (string, error) {
+	_s := []interface{}{dir, program}
+	for _, _x := range args {
+		_s = append(_s, _x)
+	}
+	ret := _m.ctrl.Call(_m, "Output", _s...)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Output indicates an expected call of Output
+func (_mr *MockCommandMockRecorder) Output(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	_s := append([]interface{}{arg0, arg1}, arg2...)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Output", reflect.TypeOf((*MockCommand)(nil).Output), _s...)
+}
