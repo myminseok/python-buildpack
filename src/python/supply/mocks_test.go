@@ -69,6 +69,18 @@ func (_mr *MockStagerMockRecorder) LinkDirectoryInDepDir(arg0, arg1 interface{})
 	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "LinkDirectoryInDepDir", reflect.TypeOf((*MockStager)(nil).LinkDirectoryInDepDir), arg0, arg1)
 }
 
+// WriteEnvFile mocks base method
+func (_m *MockStager) WriteEnvFile(_param0 string, _param1 string) error {
+	ret := _m.ctrl.Call(_m, "WriteEnvFile", _param0, _param1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WriteEnvFile indicates an expected call of WriteEnvFile
+func (_mr *MockStagerMockRecorder) WriteEnvFile(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "WriteEnvFile", reflect.TypeOf((*MockStager)(nil).WriteEnvFile), arg0, arg1)
+}
+
 // MockManifest is a mock of Manifest interface
 type MockManifest struct {
 	ctrl     *gomock.Controller

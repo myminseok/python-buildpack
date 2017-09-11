@@ -42,6 +42,7 @@ var _ = Describe("Supply", func() {
 		Expect(err).To(BeNil())
 
 		depsIdx = "13"
+
 		depDir = filepath.Join(depsDir, depsIdx)
 
 		mockCtrl = gomock.NewController(GinkgoT())
@@ -78,7 +79,7 @@ var _ = Describe("Supply", func() {
 
 		BeforeEach(func() {
 			pythonInstallDir = filepath.Join(depDir, "python")
-			ioutil.WriteFile(filepath.Join(buildDir, "runtime.txt"), []byte("python-3.4.2"), 0644)
+			ioutil.WriteFile(filepath.Join(buildDir, "runtime.txt"), []byte("\n\n\npython-3.4.2\n\n\n"), 0644)
 
 			versions = []string{"3.4.2"}
 		})
@@ -119,6 +120,13 @@ var _ = Describe("Supply", func() {
 			// FIXME test indent (and cleanup?)
 			mockCommand.EXPECT().Execute(buildDir, gomock.Any(), gomock.Any(), "pip", "install", "-r", "requirements.txt", "--exists-action=w", fmt.Sprintf("--src=%s/src", depDir))
 			Expect(supplier.RunPip()).To(Succeed())
+		})
+	})
+
+	Describe("CreateDefaultEnv", func() {
+		It("writes an env file for PYTHONPATH", func() {
+			mockStager.EXPECT().WriteEnvFile("PYTHONPATH", filepath.Join(depDir, "python"))
+			Expect(supplier.CreateDefaultEnv()).To(Succeed())
 		})
 	})
 })

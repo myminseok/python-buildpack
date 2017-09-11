@@ -16,7 +16,7 @@ type Stager interface {
 	DepDir() string
 	// DepsIdx() string
 	LinkDirectoryInDepDir(string, string) error
-	// WriteEnvFile(string, string) error
+	WriteEnvFile(string, string) error
 	// WriteProfileD(string, string) error
 	// SetStagingEnvironment() error
 }
@@ -46,8 +46,19 @@ type Supplier struct {
 func Run(s *Supplier) error {
 	// FIXME handle errors
 
-	s.InstallPython()
-	s.InstallPip()
+	if err := s.InstallPython(); err != nil {
+		s.Log.Error("Could not install python: %v", err)
+		return err
+	}
+
+	if err := s.CreateDefaultEnv(); err != nil {
+		return err
+	}
+
+	if err := s.InstallPip(); err != nil {
+		s.Log.Error("Could not install pip: %v", err)
+		return err
+	}
 
 	return nil
 }
@@ -66,19 +77,21 @@ func (s *Supplier) InstallPython() error {
 			return err
 		}
 
-		s.PythonVersion = string(userDefinedVersion)
+		s.PythonVersion = strings.TrimSpace(strings.NewReplacer("\\r", "", "\\n", "").Replace(string(userDefinedVersion)))
+		s.Log.Debug("***Version info: (%s)", s.PythonVersion)
 	}
 
 	if s.PythonVersion != "" {
 		versions := s.Manifest.AllDependencyVersions("python")
 		shortPythonVersion := strings.TrimLeft(s.PythonVersion, "python-")
+		s.Log.Debug("***Version info: (%s) (%s)", s.PythonVersion, shortPythonVersion)
 		ver, err := libbuildpack.FindMatchingVersion(shortPythonVersion, versions)
 		if err != nil {
 			return err
 		}
 		dep.Name = "python"
 		dep.Version = ver
-		// s.Log.Info("***Version info: %s, %s, %s", dep.Name, s.PythonVersion, dep.Version)
+		s.Log.Debug("***Version info: %s, %s, %s", dep.Name, s.PythonVersion, dep.Version)
 	} else {
 		var err error
 
@@ -119,9 +132,26 @@ func (s *Supplier) InstallPip() error {
 }
 
 func (s *Supplier) RunPip() error {
-
 	if err := s.Command.Execute(s.Stager.BuildDir(), os.Stdout, os.Stderr, "pip", "install", "-r", "requirements.txt", "--exists-action=w", fmt.Sprintf("--src=%s/src", s.Stager.DepDir())); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (s *Supplier) CreateDefaultEnv() error {
+	if err := os.Setenv("PYTHONPATH", filepath.Join(s.Stager.DepDir())); err != nil {
+		return err
+	}
+	if err := os.Setenv("PYTHONHOME", filepath.Join(s.Stager.DepDir(), "python")); err != nil {
+		return err
+	}
+
+	if err := s.Stager.WriteEnvFile("PYTHONPATH", filepath.Join(s.Stager.DepDir())); err != nil {
+		return err
+	}
+	if err := s.Stager.WriteEnvFile("PYTHONHOME", filepath.Join(s.Stager.DepDir(), "python")); err != nil {
+		return err
+	}
+
 	return nil
 }

@@ -3,8 +3,8 @@ package main
 import (
 	"io"
 	"io/ioutil"
-	_ "nodejs/hooks"
 	"os"
+	_ "python/hooks"
 	"python/supply"
 	"time"
 
@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	logfile, err := ioutil.TempFile("", "cloudfoundry.nodejs-buildpack.finalize")
+	logfile, err := ioutil.TempFile("", "cloudfoundry.python-buildpack.finalize")
 	defer logfile.Close()
 	if err != nil {
 		logger := libbuildpack.NewLogger(os.Stdout)
@@ -67,7 +67,7 @@ func main() {
 		// 	},
 		Manifest: manifest,
 		Log:      logger,
-		// 	Command:  &libbuildpack.Command{},
+		Command:  &libbuildpack.Command{},
 		// 	Cache: &cache.Cache{
 		// 		Stager:  stager,
 		// 		Command: &libbuildpack.Command{},
