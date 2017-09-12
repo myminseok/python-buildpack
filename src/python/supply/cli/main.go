@@ -4,6 +4,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	_ "python/hooks"
 	"python/supply"
 	"time"
@@ -46,11 +47,18 @@ func main() {
 	// 	os.Exit(12)
 	// }
 
-	// err = stager.SetStagingEnvironment()
-	// if err != nil {
-	// 	logger.Error("Unable to setup environment variables: %s", err.Error())
-	// 	os.Exit(13)
-	// }
+	for _, dir := range []string{"bin", "lib", "include", "pkgconfig"} {
+		if err := os.Mkdir(filepath.Join(stager.DepDir(), dir), 0755); err != nil {
+			logger.Error("Could not create directory: %s", err.Error())
+			os.Exit(12)
+		}
+	}
+
+	err = stager.SetStagingEnvironment()
+	if err != nil {
+		logger.Error("Unable to setup environment variables: %s", err.Error())
+		os.Exit(13)
+	}
 
 	s := supply.Supplier{
 		Logfile: logfile,

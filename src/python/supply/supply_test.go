@@ -76,12 +76,18 @@ var _ = Describe("Supply", func() {
 	Describe("InstallPython", func() {
 		var pythonInstallDir string
 		var versions []string
+		var originalPath string
 
 		BeforeEach(func() {
 			pythonInstallDir = filepath.Join(depDir, "python")
 			ioutil.WriteFile(filepath.Join(buildDir, "runtime.txt"), []byte("\n\n\npython-3.4.2\n\n\n"), 0644)
 
 			versions = []string{"3.4.2"}
+			originalPath = os.Getenv("PATH")
+		})
+
+		AfterEach(func() {
+			os.Setenv("PATH", originalPath)
 		})
 
 		Context("runtime.txt sets Python version 3", func() {
@@ -91,6 +97,8 @@ var _ = Describe("Supply", func() {
 				mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(pythonInstallDir, "bin"), "bin")
 				mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(pythonInstallDir, "lib"), "lib")
 				Expect(supplier.InstallPython()).To(Succeed())
+				Expect(os.Getenv("PATH")).To(Equal(fmt.Sprintf("%s:%s", filepath.Join(depDir, "bin"), originalPath)))
+				Expect(os.Getenv("PYTHONPATH")).To(Equal(filepath.Join(depDir)))
 			})
 		})
 	})
@@ -109,9 +117,51 @@ var _ = Describe("Supply", func() {
 			mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(pythonInstallDir, "bin"), "bin")
 			mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(pythonInstallDir, "lib"), "lib")
 			mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(pythonInstallDir, "include"), "include")
-			mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(pythonInstallDir, "pkgconfig"), "pkgconfig")
+			mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(pythonInstallDir, "lib", "pkgconfig"), "pkgconfig")
 
 			Expect(supplier.InstallPip()).To(Succeed())
+		})
+	})
+
+	Describe("InstallPipPop", func() {
+		It("Installs pip-pop", func() {
+			mockManifest.EXPECT().InstallOnlyVersion("pip-pop", "/tmp/pip-pop")
+			mockCommand.EXPECT().Execute(buildDir, gomock.Any(), gomock.Any(), "pip", "install", "pip-pop", "--exists-action=w", "--no-index", "--find-links=/tmp/pip-pop")
+			mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(filepath.Join(depDir, "python"), "bin"), "bin")
+			Expect(supplier.InstallPipPop()).To(Succeed())
+		})
+	})
+
+	Describe("HandlePylibmc", func() {
+		AfterEach(func() {
+			os.Setenv("LIBMEMCACHED", "")
+		})
+
+		Context("when the app uses pylibmc", func() {
+			BeforeEach(func() {
+				mockCommand.EXPECT().Execute(buildDir, gomock.Any(), gomock.Any(), "pip-grep", "-s", "requirements.txt", "pylibmc").Return(nil)
+			})
+			It("installs libmemcache", func() {
+				memcachedDir := filepath.Join(depDir, "libmemcache")
+				mockManifest.EXPECT().InstallOnlyVersion("libmemcache", memcachedDir)
+				mockStager.EXPECT().WriteEnvFile("LIBMEMCACHED", memcachedDir)
+				mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(memcachedDir, "lib"), "lib")
+				mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(memcachedDir, "lib", "sasl2"), "lib")
+				mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(memcachedDir, "lib", "pkgconfig"), "pkgconfig")
+				mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(memcachedDir, "include"), "include")
+				Expect(supplier.HandlePylibmc()).To(Succeed())
+				Expect(os.Getenv("LIBMEMCACHED")).To(Equal(memcachedDir))
+			})
+		})
+		Context("when the app does not use pylibmc", func() {
+			BeforeEach(func() {
+				mockCommand.EXPECT().Execute(buildDir, gomock.Any(), gomock.Any(), "pip-grep", "-s", "requirements.txt", "pylibmc").Return(fmt.Errorf("not found"))
+			})
+
+			It("does not install libmemcache", func() {
+				Expect(supplier.HandlePylibmc()).To(Succeed())
+				Expect(os.Getenv("LIBMEMCACHED")).To(Equal(""))
+			})
 		})
 	})
 
@@ -124,9 +174,9 @@ var _ = Describe("Supply", func() {
 	})
 
 	Describe("CreateDefaultEnv", func() {
-		It("writes an env file for PYTHONPATH", func() {
-			mockStager.EXPECT().WriteEnvFile("PYTHONPATH", filepath.Join(depDir, "python"))
-			Expect(supplier.CreateDefaultEnv()).To(Succeed())
-		})
+		// It("writes an env file for PYTHONPATH", func() {
+		// 	mockStager.EXPECT().WriteEnvFile("PYTHONPATH", filepath.Join(depDir, "python"))
+		// 	Expect(supplier.CreateDefaultEnv()).To(Succeed())
+		// })
 	})
 })

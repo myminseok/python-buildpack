@@ -51,14 +51,29 @@ func Run(s *Supplier) error {
 		return err
 	}
 
-	if err := s.CreateDefaultEnv(); err != nil {
-		return err
-	}
-
 	if err := s.InstallPip(); err != nil {
 		s.Log.Error("Could not install pip: %v", err)
 		return err
 	}
+
+	if err := s.InstallPipPop(); err != nil {
+		s.Log.Error("Could not install pip pop: %v", err)
+		return err
+	}
+
+	if err := s.HandlePylibmc(); err != nil {
+		s.Log.Error("Error checking Pylibmc: %v", err)
+		return err
+	}
+
+	if err := s.RunPip(); err != nil {
+		s.Log.Error("Could not install pip packages: %v", err)
+		return err
+	}
+
+	// if err := s.CreateDefaultEnv(); err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
@@ -109,6 +124,47 @@ func (s *Supplier) InstallPython() error {
 	s.Stager.LinkDirectoryInDepDir(filepath.Join(pythonInstallDir, "bin"), "bin")
 	s.Stager.LinkDirectoryInDepDir(filepath.Join(pythonInstallDir, "lib"), "lib")
 
+	if err := os.Setenv("PATH", fmt.Sprintf("%s:%s", filepath.Join(s.Stager.DepDir(), "bin"), os.Getenv("PATH"))); err != nil {
+		return err
+	}
+	if err := os.Setenv("PYTHONPATH", filepath.Join(s.Stager.DepDir())); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Supplier) InstallPipPop() error {
+	tempPath := filepath.Join("/tmp", "pip-pop")
+	if err := s.Manifest.InstallOnlyVersion("pip-pop", tempPath); err != nil {
+		return err
+	}
+
+	if err := s.Command.Execute(s.Stager.BuildDir(), os.Stdout, os.Stderr, "pip", "install", "pip-pop", "--exists-action=w", "--no-index", fmt.Sprintf("--find-links=%s", tempPath)); err != nil {
+		s.Log.Debug("******Path val: %s", os.Getenv("PATH"))
+		return err
+	}
+
+	if err := s.Stager.LinkDirectoryInDepDir(filepath.Join(s.Stager.DepDir(), "python", "bin"), "bin"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Supplier) HandlePylibmc() error {
+	memcachedDir := filepath.Join(s.Stager.DepDir(), "libmemcache")
+	if err := s.Command.Execute(s.Stager.BuildDir(), os.Stdout, os.Stderr, "pip-grep", "-s", "requirements.txt", "pylibmc"); err == nil {
+		if err := s.Manifest.InstallOnlyVersion("libmemcache", memcachedDir); err != nil {
+			return err
+		}
+		os.Setenv("LIBMEMCACHED", memcachedDir)
+		s.Stager.WriteEnvFile("LIBMEMCACHED", memcachedDir)
+		s.Stager.LinkDirectoryInDepDir(filepath.Join(memcachedDir, "lib"), "lib")
+		s.Stager.LinkDirectoryInDepDir(filepath.Join(memcachedDir, "lib", "sasl2"), "lib")
+		s.Stager.LinkDirectoryInDepDir(filepath.Join(memcachedDir, "lib", "pkgconfig"), "pkgconfig")
+		s.Stager.LinkDirectoryInDepDir(filepath.Join(memcachedDir, "include"), "include")
+	}
+
 	return nil
 }
 
@@ -124,8 +180,13 @@ func (s *Supplier) InstallPip() error {
 		}
 	}
 
-	for _, dir := range []string{"bin", "lib", "include", "pkgconfig"} {
-		s.Stager.LinkDirectoryInDepDir(filepath.Join(s.Stager.DepDir(), "python", dir), dir)
+	for _, dir := range []string{"bin", "lib", "include"} {
+		if err := s.Stager.LinkDirectoryInDepDir(filepath.Join(s.Stager.DepDir(), "python", dir), dir); err != nil {
+			return err
+		}
+	}
+	if err := s.Stager.LinkDirectoryInDepDir(filepath.Join(s.Stager.DepDir(), "python", "lib", "pkgconfig"), "pkgconfig"); err != nil {
+		return err
 	}
 
 	return nil
@@ -138,20 +199,39 @@ func (s *Supplier) RunPip() error {
 	return nil
 }
 
-func (s *Supplier) CreateDefaultEnv() error {
-	if err := os.Setenv("PYTHONPATH", filepath.Join(s.Stager.DepDir())); err != nil {
-		return err
-	}
-	if err := os.Setenv("PYTHONHOME", filepath.Join(s.Stager.DepDir(), "python")); err != nil {
-		return err
-	}
+// func (s *Supplier) symlinkAll(names []string) error {
+// 	for _, name := range names {
+// 		installDir := filepath.Join(s.Stager.DepDir(), name)
 
-	if err := s.Stager.WriteEnvFile("PYTHONPATH", filepath.Join(s.Stager.DepDir())); err != nil {
-		return err
-	}
-	if err := s.Stager.WriteEnvFile("PYTHONHOME", filepath.Join(s.Stager.DepDir(), "python")); err != nil {
-		return err
-	}
+// 		for _, dir := range []string{"bin", "lib", "include", "pkgconfig", "lib/pkgconfig"} {
+// 			exists, err := libbuildpack.FileExists(filepath.Join(installDir, dir))
+// 			if err != nil {
+// 				return err
+// 			}
+// 			if exists {
+// 				if err := s.Stager.LinkDirectoryInDepDir(filepath.Join(installDir, dir), path.Base(dir)); err != nil {
+// 					return err
+// 				}
+// 			}
+// 		}
+// 	}
+// 	return nil
+// }
+
+func (s *Supplier) CreateDefaultEnv() error {
+	// if err := os.Setenv("PYTHONPATH", filepath.Join(s.Stager.DepDir())); err != nil {
+	// 	return err
+	// }
+	// if err := os.Setenv("PYTHONHOME", filepath.Join(s.Stager.DepDir(), "python")); err != nil {
+	// 	return err
+	// }
+
+	// if err := s.Stager.WriteEnvFile("PYTHONPATH", filepath.Join(s.Stager.DepDir())); err != nil {
+	// 	return err
+	// }
+	// if err := s.Stager.WriteEnvFile("PYTHONHOME", filepath.Join(s.Stager.DepDir(), "python")); err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
