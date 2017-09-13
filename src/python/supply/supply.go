@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/cloudfoundry/libbuildpack"
@@ -105,6 +106,10 @@ func Run(s *Supplier) error {
 	// TODO: steps/nltk ?
 
 	// TODO: steps/rewrite-shebang ?
+	if err := s.RewriteShebangs(); err != nil {
+		s.Log.Error("Unable to rewrite she-bangs: %s", err.Error())
+		return err
+	}
 
 	if err := s.CreateDefaultEnv(); err != nil {
 		s.Log.Error("Unable to setup default environment: %s", err.Error())
@@ -169,6 +174,26 @@ func (s *Supplier) InstallPython() error {
 		return err
 	}
 
+	return nil
+}
+
+func (s *Supplier) RewriteShebangs() error {
+	files, err := filepath.Glob(filepath.Join(s.Stager.DepDir(), "bin", "*"))
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		fileContents, err := ioutil.ReadFile(file)
+		if err != nil {
+			return err
+		}
+		shebangRegex := regexp.MustCompile(`^#!/.*/python.*`)
+		fileContents = shebangRegex.ReplaceAll(fileContents, []byte("#!/usr/bin/env python"))
+		if err := ioutil.WriteFile(file, fileContents, 0755); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -255,7 +280,8 @@ func (s *Supplier) RunPip() error {
 		s.Log.Debug("******Path val: %s", os.Getenv("PATH"))
 		return err
 	}
-	return nil
+
+	return s.Stager.LinkDirectoryInDepDir(filepath.Join(s.Stager.DepDir(), "python", "bin"), "bin")
 }
 
 func (s *Supplier) CreateDefaultEnv() error {

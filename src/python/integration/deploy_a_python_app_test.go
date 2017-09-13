@@ -18,6 +18,7 @@ var _ = Describe("CF Python Buildpack", func() {
 				Context("including flask", func() {
 					BeforeEach(func() {
 						app = cutlass.New(filepath.Join(bpDir, "fixtures", "flask_python_3"))
+						app.SetEnv("BP_DEBUG", "1")
 					})
 
 					AfterEach(func() {})

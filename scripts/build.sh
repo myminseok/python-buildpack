@@ -8,4 +8,4 @@ export GOPATH=$ROOTDIR
 export GOOS=linux
 
 go build -ldflags="-s -w" -o $BINDIR/supply python/supply/cli
-# go build -ldflags="-s -w" -o $BINDIR/finalize python/finalize/cli
+go build -ldflags="-s -w" -o $BINDIR/finalize python/finalize/cli

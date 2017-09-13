@@ -199,10 +199,31 @@ var _ = Describe("Supply", func() {
 		})
 	})
 
+	Describe("RewriteShebangs", func() {
+		BeforeEach(func() {
+			os.MkdirAll(filepath.Join(depDir, "bin"), 0755)
+			Expect(ioutil.WriteFile(filepath.Join(depDir, "bin", "somescript"), []byte("#!/usr/bin/python\n\n\n"), 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(depDir, "bin", "anotherscript"), []byte("#!//bin/python\n\n\n"), 0755)).To(Succeed())
+		})
+		It("changes them to #!/usr/bin/env python", func() {
+			Expect(supplier.RewriteShebangs()).To(Succeed())
+
+			fileContents, err := ioutil.ReadFile(filepath.Join(depDir, "bin", "somescript"))
+			Expect(err).ToNot(HaveOccurred())
+
+			secondFileContents, err := ioutil.ReadFile(filepath.Join(depDir, "bin", "anotherscript"))
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(string(fileContents)).To(HavePrefix("#!/usr/bin/env python"))
+			Expect(string(secondFileContents)).To(HavePrefix("#!/usr/bin/env python"))
+		})
+	})
+
 	Describe("RunPip", func() {
 		It("Runs and outputs pip", func() {
 			// FIXME test indent (and cleanup?)
 			mockCommand.EXPECT().Execute(buildDir, gomock.Any(), gomock.Any(), "pip", "install", "-r", "requirements.txt", "--exists-action=w", fmt.Sprintf("--src=%s/src", depDir))
+			mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(depDir, "python", "bin"), "bin")
 			Expect(supplier.RunPip()).To(Succeed())
 		})
 	})
