@@ -46,6 +46,13 @@ type Supplier struct {
 func Run(s *Supplier) error {
 	// FIXME handle errors
 
+	// TODO: Procfile warning ?
+
+	// TODO: Restore cache?
+
+	// TODO: handle vv c.f. supply bash script
+	// # # Pipenv Python version support.
+	// # $BIN_DIR/steps/pipenv-python-version.rb $BUILD_DIR
 	if err := s.InstallPython(); err != nil {
 		s.Log.Error("Could not install python: %v", err)
 		return err
@@ -61,19 +68,50 @@ func Run(s *Supplier) error {
 		return err
 	}
 
+	// TODO: pipenv ?
+
 	if err := s.HandlePylibmc(); err != nil {
 		s.Log.Error("Error checking Pylibmc: %v", err)
 		return err
 	}
+
+	// TODO: handle vv c.f. supply bash script
+	// # # Automatic configuration for Gunicorn's ForwardedAllowIPS setting.
+	// # echo "export FORWARDED_ALLOW_IPS='*'" > $DEPS_DIR/$DEPS_IDX/profile.d/python.gunicorn.sh
+
+	// TODO: handle vv c.f. supply bash script
+	// # # If no requirements.txt file given, assume `setup.py develop` is intended.
+	// # if [ ! -f requirements.txt ]; then
+	// #   echo "-e ." > requirements.txt
+	// # fi
+	if err := s.HandleFfi(); err != nil {
+		s.Log.Error("Error checking ffi: %v", err)
+		return err
+	}
+
+	// TODO: write config.yml
+
+	// TODO: build PATH and LD_LIBRARY_PATH ? dont think this is necessary?
+
+	// TODO: steps/mercurial ?
+
+	// TODO: steps/pip-uninstall ?
 
 	if err := s.RunPip(); err != nil {
 		s.Log.Error("Could not install pip packages: %v", err)
 		return err
 	}
 
+	// TODO: steps/nltk ?
+
+	// TODO: steps/rewrite-shebang ?
+
 	// if err := s.CreateDefaultEnv(); err != nil {
+	// 	s.Log.Error("Unable to setup default environment: %s", err.Error())
 	// 	return err
 	// }
+
+	// TODO: caching?
 
 	return nil
 }
@@ -168,6 +206,24 @@ func (s *Supplier) HandlePylibmc() error {
 	return nil
 }
 
+func (s *Supplier) HandleFfi() error {
+
+	ffiDir := filepath.Join(s.Stager.DepDir(), "libffi")
+	if err := s.Command.Execute(s.Stager.BuildDir(), os.Stdout, os.Stderr, "pip-grep", "-s", "requirements.txt", "argon2-cffi", "bcrypt", "cffi", "cryptography", "django[argon2]", "Django[argon2]", "django[bcrypt]", "Django[bcrypt]", "PyNaCl", "pyOpenSSL", "PyOpenSSL", "requests[security]", "misaka"); err == nil {
+		if err := s.Manifest.InstallOnlyVersion("libffi", ffiDir); err != nil {
+			return err
+		}
+		versions := s.Manifest.AllDependencyVersions("libffi")
+		os.Setenv("LIBFFI", ffiDir)
+		s.Stager.WriteEnvFile("LIBFFI", ffiDir)
+		s.Stager.LinkDirectoryInDepDir(filepath.Join(ffiDir, "lib"), "lib")
+		s.Stager.LinkDirectoryInDepDir(filepath.Join(ffiDir, "lib", "pkgconfig"), "pkgconfig")
+		s.Stager.LinkDirectoryInDepDir(filepath.Join(ffiDir, "lib", "libffi-"+versions[0], "include"), "include")
+	}
+
+	return nil
+}
+
 func (s *Supplier) InstallPip() error {
 	for _, name := range []string{"setuptools", "pip"} {
 		if err := s.Manifest.InstallOnlyVersion(name, filepath.Join("/tmp", name)); err != nil {
@@ -193,30 +249,13 @@ func (s *Supplier) InstallPip() error {
 }
 
 func (s *Supplier) RunPip() error {
+	//TODO: what if vendored? (see steps/pip-install)
 	if err := s.Command.Execute(s.Stager.BuildDir(), os.Stdout, os.Stderr, "pip", "install", "-r", "requirements.txt", "--exists-action=w", fmt.Sprintf("--src=%s/src", s.Stager.DepDir())); err != nil {
+		s.Log.Debug("******Path val: %s", os.Getenv("PATH"))
 		return err
 	}
 	return nil
 }
-
-// func (s *Supplier) symlinkAll(names []string) error {
-// 	for _, name := range names {
-// 		installDir := filepath.Join(s.Stager.DepDir(), name)
-
-// 		for _, dir := range []string{"bin", "lib", "include", "pkgconfig", "lib/pkgconfig"} {
-// 			exists, err := libbuildpack.FileExists(filepath.Join(installDir, dir))
-// 			if err != nil {
-// 				return err
-// 			}
-// 			if exists {
-// 				if err := s.Stager.LinkDirectoryInDepDir(filepath.Join(installDir, dir), path.Base(dir)); err != nil {
-// 					return err
-// 				}
-// 			}
-// 		}
-// 	}
-// 	return nil
-// }
 
 func (s *Supplier) CreateDefaultEnv() error {
 	// if err := os.Setenv("PYTHONPATH", filepath.Join(s.Stager.DepDir())); err != nil {
@@ -233,5 +272,21 @@ func (s *Supplier) CreateDefaultEnv() error {
 	// 	return err
 	// }
 
+	// # set_default_profile_d PYTHONHASHSEED random
+	// # echo random > $DEPS_DIR/$DEPS_IDX/env/PYTHONHASHSEED
+
+	// # set_default_profile_d PYTHONPATH "\$DEPS_DIR/$DEPS_IDX"
+	// # echo "$DEPS_DIR/$DEPS_IDX" > $DEPS_DIR/$DEPS_IDX/env/PYTHONPATH
+
+	// # set_default_profile_d LANG en_US.UTF-8
+	// # echo $LANG > $DEPS_DIR/$DEPS_IDX/env/LANG
+
+	// # append_profile_d PYTHONHOME "\$DEPS_DIR/$DEPS_IDX/python"
+	// # echo $DEPS_DIR/$DEPS_IDX/python > $DEPS_DIR/$DEPS_IDX/env/PYTHONHOME
+
+	// # append_profile_d PYTHONUNBUFFERED 1
+	// # echo 1 > $DEPS_DIR/$DEPS_IDX/env/PYTHONUNBUFFERED
+
+	// # echo "$DEPS_DIR/$DEPS_IDX/lib" > $DEPS_DIR/$DEPS_IDX/env/LIBRARY_PATH
 	return nil
 }

@@ -165,6 +165,40 @@ var _ = Describe("Supply", func() {
 		})
 	})
 
+	Describe("HandleFfi", func() {
+		AfterEach(func() {
+			os.Setenv("LIBFFI", "")
+		})
+
+		Context("when the app uses ffi", func() {
+			BeforeEach(func() {
+				mockCommand.EXPECT().Execute(buildDir, gomock.Any(), gomock.Any(), "pip-grep", "-s", "requirements.txt", "argon2-cffi", "bcrypt", "cffi", "cryptography", "django[argon2]", "Django[argon2]", "django[bcrypt]", "Django[bcrypt]", "PyNaCl", "pyOpenSSL", "PyOpenSSL", "requests[security]", "misaka").Return(nil)
+			})
+
+			It("installs ffi", func() {
+				ffiDir := filepath.Join(depDir, "libffi")
+				mockManifest.EXPECT().AllDependencyVersions("libffi").Return([]string{"1.2.3"})
+				mockManifest.EXPECT().InstallOnlyVersion("libffi", ffiDir)
+				mockStager.EXPECT().WriteEnvFile("LIBFFI", ffiDir)
+				mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(ffiDir, "lib"), "lib")
+				mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(ffiDir, "lib", "pkgconfig"), "pkgconfig")
+				mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(ffiDir, "lib", "libffi-1.2.3", "include"), "include")
+				Expect(supplier.HandleFfi()).To(Succeed())
+				Expect(os.Getenv("LIBFFI")).To(Equal(ffiDir))
+			})
+		})
+		Context("when the app does not use libffi", func() {
+			BeforeEach(func() {
+				mockCommand.EXPECT().Execute(buildDir, gomock.Any(), gomock.Any(), "pip-grep", "-s", "requirements.txt", "argon2-cffi", "bcrypt", "cffi", "cryptography", "django[argon2]", "Django[argon2]", "django[bcrypt]", "Django[bcrypt]", "PyNaCl", "pyOpenSSL", "PyOpenSSL", "requests[security]", "misaka").Return(fmt.Errorf("not found"))
+			})
+
+			It("does not install libffi", func() {
+				Expect(supplier.HandleFfi()).To(Succeed())
+				Expect(os.Getenv("LIBFFI")).To(Equal(""))
+			})
+		})
+	})
+
 	Describe("RunPip", func() {
 		It("Runs and outputs pip", func() {
 			// FIXME test indent (and cleanup?)
