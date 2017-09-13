@@ -208,9 +208,25 @@ var _ = Describe("Supply", func() {
 	})
 
 	Describe("CreateDefaultEnv", func() {
-		// It("writes an env file for PYTHONPATH", func() {
-		// 	mockStager.EXPECT().WriteEnvFile("PYTHONPATH", filepath.Join(depDir, "python"))
-		// 	Expect(supplier.CreateDefaultEnv()).To(Succeed())
-		// })
+		It("writes an env file for PYTHONPATH", func() {
+			mockStager.EXPECT().WriteEnvFile("PYTHONPATH", depDir)
+			mockStager.EXPECT().WriteEnvFile("LIBRARY_PATH", filepath.Join(depDir, "lib"))
+			mockStager.EXPECT().WriteEnvFile("PYTHONHASHSEED", "random")
+			mockStager.EXPECT().WriteEnvFile("PYTHONUNBUFFERED", "1")
+			mockStager.EXPECT().WriteEnvFile("LANG", "en_US.UTF-8")
+			mockStager.EXPECT().WriteEnvFile("PYTHONHOME", filepath.Join(depDir, "python"))
+			mockStager.EXPECT().WriteProfileD(gomock.Any(), gomock.Any())
+			Expect(supplier.CreateDefaultEnv()).To(Succeed())
+		})
+
+		It("writes the profile.d", func() {
+			mockStager.EXPECT().WriteEnvFile(gomock.Any(), gomock.Any()).AnyTimes()
+			mockStager.EXPECT().WriteProfileD("python.sh", fmt.Sprintf(`export LANG=${LANG:-en_US.UTF-8}
+export PYTHONHASHSEED=${PYTHONHASHSEED:-random}
+export PYTHONPATH=%s
+export PYTHONHOME=%s
+export PYTHONUNBUFFERED=1`, depDir, filepath.Join(depDir, "python")))
+			Expect(supplier.CreateDefaultEnv()).To(Succeed())
+		})
 	})
 })

@@ -17,7 +17,7 @@ type Stager interface {
 	// DepsIdx() string
 	LinkDirectoryInDepDir(string, string) error
 	WriteEnvFile(string, string) error
-	// WriteProfileD(string, string) error
+	WriteProfileD(string, string) error
 	// SetStagingEnvironment() error
 }
 
@@ -106,10 +106,10 @@ func Run(s *Supplier) error {
 
 	// TODO: steps/rewrite-shebang ?
 
-	// if err := s.CreateDefaultEnv(); err != nil {
-	// 	s.Log.Error("Unable to setup default environment: %s", err.Error())
-	// 	return err
-	// }
+	if err := s.CreateDefaultEnv(); err != nil {
+		s.Log.Error("Unable to setup default environment: %s", err.Error())
+		return err
+	}
 
 	// TODO: caching?
 
@@ -192,6 +192,7 @@ func (s *Supplier) InstallPipPop() error {
 func (s *Supplier) HandlePylibmc() error {
 	memcachedDir := filepath.Join(s.Stager.DepDir(), "libmemcache")
 	if err := s.Command.Execute(s.Stager.BuildDir(), os.Stdout, os.Stderr, "pip-grep", "-s", "requirements.txt", "pylibmc"); err == nil {
+		s.Log.BeginStep("Noticed pylibmc. Bootstrapping libmemcached.")
 		if err := s.Manifest.InstallOnlyVersion("libmemcache", memcachedDir); err != nil {
 			return err
 		}
@@ -207,9 +208,9 @@ func (s *Supplier) HandlePylibmc() error {
 }
 
 func (s *Supplier) HandleFfi() error {
-
 	ffiDir := filepath.Join(s.Stager.DepDir(), "libffi")
 	if err := s.Command.Execute(s.Stager.BuildDir(), os.Stdout, os.Stderr, "pip-grep", "-s", "requirements.txt", "argon2-cffi", "bcrypt", "cffi", "cryptography", "django[argon2]", "Django[argon2]", "django[bcrypt]", "Django[bcrypt]", "PyNaCl", "pyOpenSSL", "PyOpenSSL", "requests[security]", "misaka"); err == nil {
+		s.Log.BeginStep("Noticed dependency requiring libffi. Bootstrapping libffi.")
 		if err := s.Manifest.InstallOnlyVersion("libffi", ffiDir); err != nil {
 			return err
 		}
@@ -258,35 +259,25 @@ func (s *Supplier) RunPip() error {
 }
 
 func (s *Supplier) CreateDefaultEnv() error {
-	// if err := os.Setenv("PYTHONPATH", filepath.Join(s.Stager.DepDir())); err != nil {
-	// 	return err
-	// }
-	// if err := os.Setenv("PYTHONHOME", filepath.Join(s.Stager.DepDir(), "python")); err != nil {
-	// 	return err
-	// }
+	var environmentVars = map[string]string{
+		"PYTHONPATH":       s.Stager.DepDir(),
+		"LIBRARY_PATH":     filepath.Join(s.Stager.DepDir(), "lib"),
+		"PYTHONHOME":       filepath.Join(s.Stager.DepDir(), "python"),
+		"PYTHONUNBUFFERED": "1",
+		"PYTHONHASHSEED":   "random",
+		"LANG":             "en_US.UTF-8",
+	}
 
-	// if err := s.Stager.WriteEnvFile("PYTHONPATH", filepath.Join(s.Stager.DepDir())); err != nil {
-	// 	return err
-	// }
-	// if err := s.Stager.WriteEnvFile("PYTHONHOME", filepath.Join(s.Stager.DepDir(), "python")); err != nil {
-	// 	return err
-	// }
+	for envVar, envValue := range environmentVars {
+		if err := s.Stager.WriteEnvFile(envVar, envValue); err != nil {
+			return err
+		}
+	}
 
-	// # set_default_profile_d PYTHONHASHSEED random
-	// # echo random > $DEPS_DIR/$DEPS_IDX/env/PYTHONHASHSEED
-
-	// # set_default_profile_d PYTHONPATH "\$DEPS_DIR/$DEPS_IDX"
-	// # echo "$DEPS_DIR/$DEPS_IDX" > $DEPS_DIR/$DEPS_IDX/env/PYTHONPATH
-
-	// # set_default_profile_d LANG en_US.UTF-8
-	// # echo $LANG > $DEPS_DIR/$DEPS_IDX/env/LANG
-
-	// # append_profile_d PYTHONHOME "\$DEPS_DIR/$DEPS_IDX/python"
-	// # echo $DEPS_DIR/$DEPS_IDX/python > $DEPS_DIR/$DEPS_IDX/env/PYTHONHOME
-
-	// # append_profile_d PYTHONUNBUFFERED 1
-	// # echo 1 > $DEPS_DIR/$DEPS_IDX/env/PYTHONUNBUFFERED
-
-	// # echo "$DEPS_DIR/$DEPS_IDX/lib" > $DEPS_DIR/$DEPS_IDX/env/LIBRARY_PATH
-	return nil
+	scriptContents := `export LANG=${LANG:-en_US.UTF-8}
+export PYTHONHASHSEED=${PYTHONHASHSEED:-random}
+export PYTHONPATH=%s
+export PYTHONHOME=%s
+export PYTHONUNBUFFERED=1`
+	return s.Stager.WriteProfileD("python.sh", fmt.Sprintf(scriptContents, s.Stager.DepDir(), filepath.Join(s.Stager.DepDir(), "python")))
 }
