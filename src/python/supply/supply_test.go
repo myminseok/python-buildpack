@@ -50,6 +50,7 @@ var _ = Describe("Supply", func() {
 		mockStager = NewMockStager(mockCtrl)
 		mockStager.EXPECT().BuildDir().AnyTimes().Return(buildDir)
 		mockStager.EXPECT().DepDir().AnyTimes().Return(depDir)
+		mockStager.EXPECT().DepsIdx().AnyTimes().Return(depsIdx)
 		mockCommand = NewMockCommand(mockCtrl)
 
 		buffer = new(bytes.Buffer)
@@ -199,11 +200,54 @@ var _ = Describe("Supply", func() {
 		})
 	})
 
+	Describe("HandleMercurial", func() {
+		Context("has mercurial dependencies", func() {
+			BeforeEach(func() {
+				mockCommand.EXPECT().Execute(buildDir, gomock.Any(), gomock.Any(), "grep", "-Fiq", "hg+", "requirements.txt")
+			})
+
+			Context("the buildpack is not cached", func() {
+				BeforeEach(func() {
+					mockManifest.EXPECT().IsCached().Return(false)
+				})
+				It("installs mercurial", func() {
+					mockCommand.EXPECT().Execute(buildDir, gomock.Any(), gomock.Any(), "pip", "install", "mercurial")
+					mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(depDir, "python", "bin"), "bin")
+					Expect(supplier.HandleMercurial()).To(Succeed())
+				})
+			})
+
+			Context("the buildpack is cached", func() {
+				BeforeEach(func() {
+					mockManifest.EXPECT().IsCached().Return(true)
+				})
+				It("installs mercurial and provides a warning", func() {
+					mockCommand.EXPECT().Execute(buildDir, gomock.Any(), gomock.Any(), "pip", "install", "mercurial")
+					mockStager.EXPECT().LinkDirectoryInDepDir(filepath.Join(depDir, "python", "bin"), "bin")
+					Expect(supplier.HandleMercurial()).To(Succeed())
+					Expect(buffer.String()).To(ContainSubstring("Cloud Foundry does not support Pip Mercurial dependencies while in offline-mode. Vendor your dependencies if they do not work."))
+				})
+			})
+
+		})
+		Context("does not have mercurial dependencies", func() {
+			BeforeEach(func() {
+				mockCommand.EXPECT().Execute(buildDir, gomock.Any(), gomock.Any(), "grep", "-Fiq", "hg+", "requirements.txt").Return(fmt.Errorf("Mercurial not found"))
+			})
+
+			It("succeeds without installing mercurial", func() {
+				Expect(supplier.HandleMercurial()).To(Succeed())
+			})
+		})
+	})
+
 	Describe("RewriteShebangs", func() {
 		BeforeEach(func() {
-			os.MkdirAll(filepath.Join(depDir, "bin"), 0755)
+			Expect(os.MkdirAll(filepath.Join(depDir, "bin"), 0755)).To(Succeed())
 			Expect(ioutil.WriteFile(filepath.Join(depDir, "bin", "somescript"), []byte("#!/usr/bin/python\n\n\n"), 0755)).To(Succeed())
 			Expect(ioutil.WriteFile(filepath.Join(depDir, "bin", "anotherscript"), []byte("#!//bin/python\n\n\n"), 0755)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Join(depDir, "bin", "__pycache__"), 0755)).To(Succeed())
+			Expect(os.Symlink(filepath.Join(depDir, "bin", "__pycache__"), filepath.Join(depDir, "bin", "__pycache__SYMLINK"))).To(Succeed())
 		})
 		It("changes them to #!/usr/bin/env python", func() {
 			Expect(supplier.RewriteShebangs()).To(Succeed())
@@ -244,9 +288,9 @@ var _ = Describe("Supply", func() {
 			mockStager.EXPECT().WriteEnvFile(gomock.Any(), gomock.Any()).AnyTimes()
 			mockStager.EXPECT().WriteProfileD("python.sh", fmt.Sprintf(`export LANG=${LANG:-en_US.UTF-8}
 export PYTHONHASHSEED=${PYTHONHASHSEED:-random}
-export PYTHONPATH=%s
-export PYTHONHOME=%s
-export PYTHONUNBUFFERED=1`, depDir, filepath.Join(depDir, "python")))
+export PYTHONPATH=$DEPS_DIR/%s
+export PYTHONHOME=$DEPS_DIR/%s/python
+export PYTHONUNBUFFERED=1`, depsIdx, depsIdx))
 			Expect(supplier.CreateDefaultEnv()).To(Succeed())
 		})
 	})

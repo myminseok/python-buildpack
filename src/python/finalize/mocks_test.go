@@ -5,6 +5,7 @@ package finalize_test
 
 import (
 	gomock "github.com/golang/mock/gomock"
+	io "io"
 	reflect "reflect"
 )
 
@@ -88,4 +89,98 @@ func (_m *MockStager) DepDir() string {
 // DepDir indicates an expected call of DepDir
 func (_mr *MockStagerMockRecorder) DepDir() *gomock.Call {
 	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "DepDir", reflect.TypeOf((*MockStager)(nil).DepDir))
+}
+
+// MockCommand is a mock of Command interface
+type MockCommand struct {
+	ctrl     *gomock.Controller
+	recorder *MockCommandMockRecorder
+}
+
+// MockCommandMockRecorder is the mock recorder for MockCommand
+type MockCommandMockRecorder struct {
+	mock *MockCommand
+}
+
+// NewMockCommand creates a new mock instance
+func NewMockCommand(ctrl *gomock.Controller) *MockCommand {
+	mock := &MockCommand{ctrl: ctrl}
+	mock.recorder = &MockCommandMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (_m *MockCommand) EXPECT() *MockCommandMockRecorder {
+	return _m.recorder
+}
+
+// Execute mocks base method
+func (_m *MockCommand) Execute(_param0 string, _param1 io.Writer, _param2 io.Writer, _param3 string, _param4 ...string) error {
+	_s := []interface{}{_param0, _param1, _param2, _param3}
+	for _, _x := range _param4 {
+		_s = append(_s, _x)
+	}
+	ret := _m.ctrl.Call(_m, "Execute", _s...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Execute indicates an expected call of Execute
+func (_mr *MockCommandMockRecorder) Execute(arg0, arg1, arg2, arg3 interface{}, arg4 ...interface{}) *gomock.Call {
+	_s := append([]interface{}{arg0, arg1, arg2, arg3}, arg4...)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Execute", reflect.TypeOf((*MockCommand)(nil).Execute), _s...)
+}
+
+// Output mocks base method
+func (_m *MockCommand) Output(dir string, program string, args ...string) (string, error) {
+	_s := []interface{}{dir, program}
+	for _, _x := range args {
+		_s = append(_s, _x)
+	}
+	ret := _m.ctrl.Call(_m, "Output", _s...)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Output indicates an expected call of Output
+func (_mr *MockCommandMockRecorder) Output(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	_s := append([]interface{}{arg0, arg1}, arg2...)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Output", reflect.TypeOf((*MockCommand)(nil).Output), _s...)
+}
+
+// MockManagePyFinder is a mock of ManagePyFinder interface
+type MockManagePyFinder struct {
+	ctrl     *gomock.Controller
+	recorder *MockManagePyFinderMockRecorder
+}
+
+// MockManagePyFinderMockRecorder is the mock recorder for MockManagePyFinder
+type MockManagePyFinderMockRecorder struct {
+	mock *MockManagePyFinder
+}
+
+// NewMockManagePyFinder creates a new mock instance
+func NewMockManagePyFinder(ctrl *gomock.Controller) *MockManagePyFinder {
+	mock := &MockManagePyFinder{ctrl: ctrl}
+	mock.recorder = &MockManagePyFinderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (_m *MockManagePyFinder) EXPECT() *MockManagePyFinderMockRecorder {
+	return _m.recorder
+}
+
+// FindManagePy mocks base method
+func (_m *MockManagePyFinder) FindManagePy(dir string) (string, error) {
+	ret := _m.ctrl.Call(_m, "FindManagePy", dir)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindManagePy indicates an expected call of FindManagePy
+func (_mr *MockManagePyFinderMockRecorder) FindManagePy(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "FindManagePy", reflect.TypeOf((*MockManagePyFinder)(nil).FindManagePy), arg0)
 }

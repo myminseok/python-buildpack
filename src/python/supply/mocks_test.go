@@ -57,6 +57,18 @@ func (_mr *MockStagerMockRecorder) DepDir() *gomock.Call {
 	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "DepDir", reflect.TypeOf((*MockStager)(nil).DepDir))
 }
 
+// DepsIdx mocks base method
+func (_m *MockStager) DepsIdx() string {
+	ret := _m.ctrl.Call(_m, "DepsIdx")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// DepsIdx indicates an expected call of DepsIdx
+func (_mr *MockStagerMockRecorder) DepsIdx() *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "DepsIdx", reflect.TypeOf((*MockStager)(nil).DepsIdx))
+}
+
 // LinkDirectoryInDepDir mocks base method
 func (_m *MockStager) LinkDirectoryInDepDir(_param0 string, _param1 string) error {
 	ret := _m.ctrl.Call(_m, "LinkDirectoryInDepDir", _param0, _param1)
@@ -163,6 +175,18 @@ func (_m *MockManifest) InstallOnlyVersion(_param0 string, _param1 string) error
 // InstallOnlyVersion indicates an expected call of InstallOnlyVersion
 func (_mr *MockManifestMockRecorder) InstallOnlyVersion(arg0, arg1 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "InstallOnlyVersion", reflect.TypeOf((*MockManifest)(nil).InstallOnlyVersion), arg0, arg1)
+}
+
+// IsCached mocks base method
+func (_m *MockManifest) IsCached() bool {
+	ret := _m.ctrl.Call(_m, "IsCached")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsCached indicates an expected call of IsCached
+func (_mr *MockManifestMockRecorder) IsCached() *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "IsCached", reflect.TypeOf((*MockManifest)(nil).IsCached))
 }
 
 // MockCommand is a mock of Command interface

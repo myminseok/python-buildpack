@@ -15,7 +15,7 @@ import (
 type Stager interface {
 	BuildDir() string
 	DepDir() string
-	// DepsIdx() string
+	DepsIdx() string
 	LinkDirectoryInDepDir(string, string) error
 	WriteEnvFile(string, string) error
 	WriteProfileD(string, string) error
@@ -27,6 +27,7 @@ type Manifest interface {
 	DefaultVersion(string) (libbuildpack.Dependency, error)
 	InstallDependency(libbuildpack.Dependency, string) error
 	InstallOnlyVersion(string, string) error
+	IsCached() bool
 }
 
 type Command interface {
@@ -95,6 +96,10 @@ func Run(s *Supplier) error {
 	// TODO: build PATH and LD_LIBRARY_PATH ? dont think this is necessary?
 
 	// TODO: steps/mercurial ?
+	if err := s.HandleMercurial(); err != nil {
+		s.Log.Error("Could not handle pip mercurial dependencies: %v", err)
+		return err
+	}
 
 	// TODO: steps/pip-uninstall ?
 
@@ -105,7 +110,6 @@ func Run(s *Supplier) error {
 
 	// TODO: steps/nltk ?
 
-	// TODO: steps/rewrite-shebang ?
 	if err := s.RewriteShebangs(); err != nil {
 		s.Log.Error("Unable to rewrite she-bangs: %s", err.Error())
 		return err
@@ -118,6 +122,26 @@ func Run(s *Supplier) error {
 
 	// TODO: caching?
 
+	return nil
+}
+
+func (s *Supplier) HandleMercurial() error {
+	if err := s.Command.Execute(s.Stager.BuildDir(), os.Stdout, os.Stderr, "grep", "-Fiq", "hg+", "requirements.txt"); err != nil {
+		return nil
+	}
+
+	if s.Manifest.IsCached() {
+		s.Log.Warning("Cloud Foundry does not support Pip Mercurial dependencies while in offline-mode. Vendor your dependencies if they do not work.")
+	}
+
+	//TODO: output pipe through equivalent of shell: cleanup | indent
+	if err := s.Command.Execute(s.Stager.BuildDir(), os.Stdout, os.Stderr, "pip", "install", "mercurial"); err != nil {
+		return err
+	}
+
+	if err := s.Stager.LinkDirectoryInDepDir(filepath.Join(s.Stager.DepDir(), "python", "bin"), "bin"); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -184,6 +208,11 @@ func (s *Supplier) RewriteShebangs() error {
 	}
 
 	for _, file := range files {
+		if fileInfo, err := os.Stat(file); err != nil {
+			return err
+		} else if fileInfo.IsDir() {
+			continue
+		}
 		fileContents, err := ioutil.ReadFile(file)
 		if err != nil {
 			return err
@@ -302,8 +331,8 @@ func (s *Supplier) CreateDefaultEnv() error {
 
 	scriptContents := `export LANG=${LANG:-en_US.UTF-8}
 export PYTHONHASHSEED=${PYTHONHASHSEED:-random}
-export PYTHONPATH=%s
-export PYTHONHOME=%s
+export PYTHONPATH=$DEPS_DIR/%s
+export PYTHONHOME=$DEPS_DIR/%s/python
 export PYTHONUNBUFFERED=1`
-	return s.Stager.WriteProfileD("python.sh", fmt.Sprintf(scriptContents, s.Stager.DepDir(), filepath.Join(s.Stager.DepDir(), "python")))
+	return s.Stager.WriteProfileD("python.sh", fmt.Sprintf(scriptContents, s.Stager.DepsIdx(), s.Stager.DepsIdx()))
 }

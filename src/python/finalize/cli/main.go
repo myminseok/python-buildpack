@@ -6,6 +6,7 @@ import (
 	"os"
 	"python/finalize"
 	_ "python/hooks"
+	"python/manage_py_finder"
 	"time"
 
 	"github.com/cloudfoundry/libbuildpack"
@@ -42,10 +43,12 @@ func main() {
 	}
 
 	f := finalize.Finalizer{
-		Stager:   stager,
-		Manifest: manifest,
-		Log:      logger,
-		Logfile:  logfile,
+		Stager:         stager,
+		Manifest:       manifest,
+		Log:            logger,
+		Logfile:        logfile,
+		Command:        &libbuildpack.Command{},
+		ManagePyFinder: manage_py_finder.ManagePyFinder{},
 	}
 
 	if err := finalize.Run(&f); err != nil {
